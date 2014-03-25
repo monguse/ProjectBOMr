@@ -90,9 +90,10 @@ Partial Class UserForm
         'rtb_Console
         '
         Me.rtb_Console.BorderStyle = System.Windows.Forms.BorderStyle.None
-        Me.rtb_Console.Enabled = False
+        Me.rtb_Console.HideSelection = False
         Me.rtb_Console.Location = New System.Drawing.Point(6, 19)
         Me.rtb_Console.Name = "rtb_Console"
+        Me.rtb_Console.ReadOnly = True
         Me.rtb_Console.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical
         Me.rtb_Console.Size = New System.Drawing.Size(365, 174)
         Me.rtb_Console.TabIndex = 0
