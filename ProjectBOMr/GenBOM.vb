@@ -21,14 +21,29 @@
     Public Function ProcessFolder(folderPath As String, sProjNum As String) As String
         Dim rawBOM As New System.Data.DataTable
         Dim parentBOM As New System.Data.DataTable
+        Dim pType1BOM As New System.Data.DataTable
+        Dim pType2BOM As New System.Data.DataTable
+        Dim pType3BOM As New System.Data.DataTable
+        Dim unknownBOM As New System.Data.DataTable
 
         ProcessFolder = ""
 
         CSVFolderToTable(dt:=rawBOM, folderPath:=folderPath)
         SortByParent(dt:=parentBOM, st:=rawBOM)
-        DumpTablesToExcel(bomSavePath:=folderPath + "\BOM " + sProjNum + ".xlsx", _
+        sortByType(dt:=pType1BOM, st:=rawBOM, typeName:="Assembly")
+        sortByType(dt:=pType2BOM, st:=rawBOM, typeName:="Weldment")
+        sortByType(dt:=pType3BOM, st:=rawBOM, typeName:="Single Part")
+        sortByType(dt:=unknownBOM, st:=rawBOM, typeName:="Unknown")
+
+        If DumpTablesToExcel(bomSavePath:=folderPath + "\BOM " + sProjNum + ".xlsx", _
                           stRaw:=rawBOM, _
-                          stParent:=parentBOM)
+                          stParent:=parentBOM, _
+                          stType1:=pType1BOM, _
+                          stType2:=pType2BOM, _
+                          stType3:=pType3BOM, _
+                          stUnknown:=unknownBOM) Then
+            ProcessFolder = folderPath + "\BOM " + sProjNum + ".xlsx"
+        End If
 
         'Dim fPath As String = sPath + "\BOM " + sProjNum + ".csv"
         'Dim fPath As String = sPath + "\BOM " + sProjNum + ".xlsx"
@@ -153,21 +168,18 @@
     Private Sub SortByParent(ByRef dt As System.Data.DataTable, ByRef st As System.Data.DataTable)
         Dim foundParent, isFirstRow, isTheEnd As Boolean
         Dim queryNumber As String
-        Dim numColumns As Integer
+        Dim numColumns, dtrow, dtcolumns As Integer
         Dim dtDataRow As System.Data.DataRow
-        Dim dtDataColumn As System.Data.Datacolumn
-
-        numColumns = 1
-        queryNumber = ""
 
         dt.Columns.Add(columnName:="DWG QTY", type:=GetType(String))
         dt.Columns.Add(columnName:="DESCRIPTION", type:=GetType(String))
         dt.Columns.Add(columnName:="1", type:=GetType(String))
 
+        queryNumber = ""
+
         For stRowParent As Integer = 0 To st.Rows.Count - 1
             foundParent = False
             queryNumber = st.Rows(stRowParent)(1)
-            Debug.Print(queryNumber)
 
             If queryNumber = "" Then
                 Continue For
@@ -186,20 +198,24 @@
             End If
         Next
 
+
+        numColumns = 1
+        dtcolumns = numColumns
+        dtrow = 0
+        Dim runcount As Integer = 0
         Do
+            Debug.Print("runcount: " & runcount & " " & dtrow & " " & dt.Rows.Count)
             isFirstRow = True
             isTheEnd = True
             queryNumber = ""
-            For dtRow As Integer = 0 To dt.Rows.Count - 1
-                If Not IsDBNull(dt.Rows(dtRow)(1 + numColumns)) Then
-                    queryNumber = dt.Rows(dtRow)(1 + numColumns)
-                    Debug.Print(queryNumber)
+            Do While dtrow < dt.Rows.Count
+                If Not IsDBNull(dt.Rows(dtrow)(CStr(dtcolumns))) Then
+                    queryNumber = dt.Rows(dtrow)(CStr(dtcolumns))
+                Else
+                    dtrow += 1
+                    Continue Do
                 End If
-
-                If queryNumber = "" Then
-                    Continue For
-                End If
-
+                Debug.Print("meep: " & queryNumber & " " & dtrow)
                 For stRow As Integer = 0 To st.Rows.Count - 1
                     If st.Rows(stRow)(1) = queryNumber And st.Rows(stRow)(0) <> queryNumber Then
                         If isFirstRow Then
@@ -209,23 +225,99 @@
                             isTheEnd = False
                         End If
                         If st.Rows(stRow)(0)(0) = "4"c Then
+                            Debug.Print(dtrow & " " & dtcolumns & " " & dt.Rows.Count & " " & stRow & " " & st.Rows(stRow)(0) & ":" & st.Rows(stRow)(1) & ":" & queryNumber)
                             dtDataRow = dt.NewRow()
                             dtDataRow(columnName:=CStr(numColumns)) = st.Rows(stRow)(0)
                             dtDataRow(columnName:="DWG QTY") = st.Rows(stRow)(5)
                             dtDataRow(columnName:="DESCRIPTION") = st.Rows(stRow)(3)
-                            dt.Rows.InsertAt(row:=dtDataRow, pos:=dtRow + 1)
+                            dt.Rows.InsertAt(row:=dtDataRow, pos:=dtrow + 1)
                         End If
                     End If
                 Next
-            Next
+                dtrow += 1
+            Loop
             If isTheEnd Then
                 Exit Do
             End If
+            runcount += 1
+            dtrow = 0
+            dtcolumns = numColumns
         Loop
     End Sub
 
     Private Sub sortByType(ByRef dt As System.Data.DataTable, ByRef st As System.Data.DataTable, typeName As String)
 
+        Dim queryNumber, queryParent, queryDescription, queryMaterial, queryType As String
+        Dim queryLG, queryWD, queryQty As Double
+        Dim foundChild As Boolean
+        Dim dtRow As Integer
+
+        dt.Columns.Add(columnName:="NUMBER", type:=GetType(String))
+        dt.Columns.Add(columnName:="DESCRIPTION", type:=GetType(String))
+        dt.Columns.Add(columnName:="MATERIAL", type:=GetType(String))
+        dt.Columns.Add(columnName:="QTY", type:=GetType(Double))
+        dt.Columns.Add(columnName:="QTY UNIT", type:=GetType(String))
+        dt.Columns.Add(columnName:="PARENTS", type:=GetType(String))
+        dt.Columns.Add(columnName:="TYPE", type:=GetType(String))
+
+        For stRow As Integer = 0 To st.Rows.Count - 1
+            queryNumber = st.Rows(stRow)(0)
+            queryParent = st.Rows(stRow)(1)
+            queryDescription = st.Rows(stRow)(3)
+            queryMaterial = st.Rows(stRow)(4)
+            queryType = st.Rows(stRow)(2)
+
+
+            queryLG = Frac2Num(st.Rows(stRow)(7))
+            queryWD = Frac2Num(st.Rows(stRow)(8))
+            queryQty = CDbl(st.Rows(stRow)(5))
+            Debug.Print("moop: " & queryLG & " " & queryWD)
+
+            foundChild = False
+
+            If typeName = "Unknown" Then
+                If queryType = "Assembly" Or queryType = "Weldment" Or queryType = "Single Part" Or queryType = "" Then
+                    Continue For
+                End If
+            ElseIf queryType <> typeName Or queryNumber = "" Then
+                Continue For
+            End If
+
+
+            For dtRow = 0 To dt.Rows.Count - 1
+                If dt.Rows(dtRow)(0) = queryNumber And _
+                    dt.Rows(dtRow)(1) = queryDescription And _
+                    dt.Rows(dtRow)(2) = queryMaterial Then
+                    foundChild = True
+                    Exit For
+                End If
+            Next
+
+            If st.Rows(stRow)(0) <> st.Rows(stRow)(1) Then
+                If foundChild Then
+                    If queryLG = 0 Then
+                        dt.Rows(dtRow)("QTY") = dt.Rows(dtRow)("QTY") + queryQty
+                    ElseIf queryWD = 0 Then
+                        dt.Rows(dtRow)("QTY") = dt.Rows(dtRow)("QTY") + (queryQty * queryLG)
+                    Else
+                        dt.Rows(dtRow)("QTY") = dt.Rows(dtRow)("QTY") + (queryQty * queryLG * queryWD)
+                    End If
+                    If InStr(dt.Rows(dtRow)("PARENTS"), queryParent) = 0 Then
+                        dt.Rows(dtRow)("PARENTS") = dt.Rows(dtRow)("PARENTS") & ", " & queryParent
+                    End If
+                Else
+
+                    dt.Rows.Add({queryNumber, queryDescription, queryMaterial, 0, "", queryParent, queryType})
+                    If queryLG = 0 Then
+                        dt.Rows(dt.Rows.Count - 1)("QTY") = queryQty
+                    ElseIf queryWD = 0 Then
+                        dt.Rows(dt.Rows.Count - 1)("QTY") = queryQty * queryLG
+                    Else
+                        dt.Rows(dt.Rows.Count - 1)("QTY") = queryQty * queryLG * queryWD
+                    End If
+                End If
+            End If
+        Next
     End Sub
 
     Private Sub TableToWorksheet(ByRef st As System.Data.DataTable, ByRef ws As Excel.Worksheet)
@@ -237,13 +329,18 @@
         Next
     End Sub
 
-    Private Sub DumpTablesToExcel(ByVal bomSavePath As String, _
+    Private Function DumpTablesToExcel(ByVal bomSavePath As String, _
                                   ByRef stRaw As System.Data.DataTable, _
-                                  ByRef stParent As System.Data.DataTable)
+                                  ByRef stParent As System.Data.DataTable, _
+                                  ByRef stType1 As System.Data.DataTable, _
+                                  ByRef stType2 As System.Data.DataTable, _
+                                  ByRef stType3 As System.Data.DataTable, _
+                                  ByRef stUnknown As System.Data.DataTable) As Boolean
 
         Dim xlApp As Excel.Application = Nothing
         Dim xlWB As Excel.Workbook = Nothing
         Dim xlSh As Excel.Worksheet = Nothing
+        DumpTablesToExcel = False
 
         Try
             xlApp = New Excel.Application()
@@ -256,10 +353,49 @@
             xlSh = DirectCast(xlWB.Sheets(1), Excel.Worksheet)
             xlSh.Name = "RAW DATA"
             TableToWorksheet(st:=stRaw, ws:=xlSh)
+            xlSh.Columns.AutoFit()
+            xlSh.Rows(1).font.bold = True
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 9)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
+            xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+
+            xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
+            xlSh.Name = "Process Code Unknown"
+            TableToWorksheet(st:=stUnknown, ws:=xlSh)
+            xlSh.Columns.AutoFit()
+            xlSh.Rows(1).font.bold = True
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
+            xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+
+            xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
+            xlSh.Name = "Process Code 3"
+            TableToWorksheet(st:=stType3, ws:=xlSh)
+            xlSh.Columns.AutoFit()
+            xlSh.Rows(1).font.bold = True
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
+            xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+
+            xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
+            xlSh.Name = "Process Code 2"
+            TableToWorksheet(st:=stType2, ws:=xlSh)
+            xlSh.Columns.AutoFit()
+            xlSh.Rows(1).font.bold = True
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
+            xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+
+            xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
+            xlSh.Name = "Process Code 1"
+            TableToWorksheet(st:=stType1, ws:=xlSh)
+            xlSh.Columns.AutoFit()
+            xlSh.Rows(1).font.bold = True
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
+            xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
 
             xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
             xlSh.Name = "Project Hierarchy"
             TableToWorksheet(st:=stParent, ws:=xlSh)
+            xlSh.Columns.AutoFit()
+            xlSh.Rows(1).font.bold = True
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, stParent.Columns.Count)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
 
         Catch ex As Exception
             Debug.Print("DumpTablesToExcel1: " & ex.Message)
@@ -286,6 +422,8 @@
             End If
         Catch ex As Exception
             Debug.Print("DumpTablesToExcel2: " & ex.Message)
+        Finally
+            DumpTablesToExcel = True
         End Try
 
         xlWB = Nothing
@@ -293,6 +431,6 @@
         ' force final cleanup!
         GC.Collect()
         GC.WaitForPendingFinalizers()
-    End Sub
+    End Function
 
 End Module

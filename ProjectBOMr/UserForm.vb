@@ -48,7 +48,8 @@
         If sProjPath <> "" Then
             Dim sBomPath = GenBOM.ProcessFolder(sProjPath, tb_Project.Text)
             If sBomPath <> "" Then
-                Cout("Wrote BOM: " + sBomPath)
+                Cout("Wrote BOM! ")
+                Cout("  " & sBomPath)
             Else
                 Cout("Failed to write BOM")
             End If
