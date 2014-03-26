@@ -1,7 +1,6 @@
 ﻿Module GenBOM
     Private Const BaseFilePath = "C:\projects\"
 
-
     ' Gets the user's history with the specified project number
     ' The history files are stored in the user's AppData
     Private Sub GetHistory(iProjNum As Long)
@@ -30,10 +29,10 @@
 
         CSVFolderToTable(dt:=rawBOM, folderPath:=folderPath)
         SortByParent(dt:=parentBOM, st:=rawBOM)
-        sortByType(dt:=pType1BOM, st:=rawBOM, typeName:="Assembly")
-        sortByType(dt:=pType2BOM, st:=rawBOM, typeName:="Weldment")
-        sortByType(dt:=pType3BOM, st:=rawBOM, typeName:="Single Part")
-        sortByType(dt:=unknownBOM, st:=rawBOM, typeName:="Unknown")
+        sortByType(dt:=pType1BOM, st:=rawBOM, processCode:=1)
+        sortByType(dt:=pType2BOM, st:=rawBOM, processCode:=2)
+        sortByType(dt:=pType3BOM, st:=rawBOM, processCode:=3)
+        sortByType(dt:=unknownBOM, st:=rawBOM, processCode:=-1)
 
         If DumpTablesToExcel(bomSavePath:=folderPath + "\BOM " + sProjNum + ".xlsx", _
                           stRaw:=rawBOM, _
@@ -138,7 +137,7 @@
 
         dt.Columns.Add(columnName:="NUMBER", type:=GetType(String))
         dt.Columns.Add(columnName:="PARENT", type:=GetType(String))
-        dt.Columns.Add(columnName:="DOCUMENT TYPE", type:=GetType(String))
+        dt.Columns.Add(columnName:="PROCESS CODE", type:=GetType(String))
         dt.Columns.Add(columnName:="DESCRIPTION", type:=GetType(String))
         dt.Columns.Add(columnName:="MATERIAL", type:=GetType(String))
         dt.Columns.Add(columnName:="QTY", type:=GetType(String))
@@ -217,7 +216,7 @@
                 End If
                 Debug.Print("meep: " & queryNumber & " " & dtrow)
                 For stRow As Integer = 0 To st.Rows.Count - 1
-                    If st.Rows(stRow)(1) = queryNumber And st.Rows(stRow)(0) <> queryNumber Then
+                    If st.Rows(stRow)(1) = queryNumber And st.Rows(stRow)(0) <> queryNumber And st.Rows(stRow)(0) <> "" Then
                         If isFirstRow Then
                             numColumns += 1
                             dt.Columns.Add(columnName:=CStr(numColumns), type:=GetType(String))
@@ -245,12 +244,12 @@
         Loop
     End Sub
 
-    Private Sub sortByType(ByRef dt As System.Data.DataTable, ByRef st As System.Data.DataTable, typeName As String)
+    Private Sub sortByType(ByRef dt As System.Data.DataTable, ByRef st As System.Data.DataTable, processCode As Integer)
 
-        Dim queryNumber, queryParent, queryDescription, queryMaterial, queryType As String
+        Dim queryNumber, queryParent, queryDescription, queryMaterial As String
         Dim queryLG, queryWD, queryQty As Double
         Dim foundChild As Boolean
-        Dim dtRow As Integer
+        Dim dtRow, queryCode As Integer
 
         dt.Columns.Add(columnName:="NUMBER", type:=GetType(String))
         dt.Columns.Add(columnName:="DESCRIPTION", type:=GetType(String))
@@ -258,15 +257,14 @@
         dt.Columns.Add(columnName:="QTY", type:=GetType(Double))
         dt.Columns.Add(columnName:="QTY UNIT", type:=GetType(String))
         dt.Columns.Add(columnName:="PARENTS", type:=GetType(String))
-        dt.Columns.Add(columnName:="TYPE", type:=GetType(String))
+        dt.Columns.Add(columnName:="PROCESS CODE", type:=GetType(Integer))
 
         For stRow As Integer = 0 To st.Rows.Count - 1
             queryNumber = st.Rows(stRow)(0)
             queryParent = st.Rows(stRow)(1)
             queryDescription = st.Rows(stRow)(3)
             queryMaterial = st.Rows(stRow)(4)
-            queryType = st.Rows(stRow)(2)
-
+            queryCode = st.Rows(stRow)(2)
 
             queryLG = Frac2Num(st.Rows(stRow)(7))
             queryWD = Frac2Num(st.Rows(stRow)(8))
@@ -275,14 +273,13 @@
 
             foundChild = False
 
-            If typeName = "Unknown" Then
-                If queryType = "Assembly" Or queryType = "Weldment" Or queryType = "Single Part" Or queryType = "" Then
+            If processCode = -1 Then
+                If queryCode = 1 Or queryCode = 2 Or queryCode = 3 Or queryCode = 0 Then
                     Continue For
                 End If
-            ElseIf queryType <> typeName Or queryNumber = "" Then
+            ElseIf queryCode <> processCode Or queryCode = 0 Then
                 Continue For
             End If
-
 
             For dtRow = 0 To dt.Rows.Count - 1
                 If dt.Rows(dtRow)(0) = queryNumber And _
@@ -306,14 +303,16 @@
                         dt.Rows(dtRow)("PARENTS") = dt.Rows(dtRow)("PARENTS") & ", " & queryParent
                     End If
                 Else
-
-                    dt.Rows.Add({queryNumber, queryDescription, queryMaterial, 0, "", queryParent, queryType})
+                    dt.Rows.Add({queryNumber, queryDescription, queryMaterial, 0, "", queryParent, queryCode})
                     If queryLG = 0 Then
                         dt.Rows(dt.Rows.Count - 1)("QTY") = queryQty
+                        dt.Rows(dt.Rows.Count - 1)("QTY UNIT") = "EACH"
                     ElseIf queryWD = 0 Then
                         dt.Rows(dt.Rows.Count - 1)("QTY") = queryQty * queryLG
+                        dt.Rows(dt.Rows.Count - 1)("QTY UNIT") = "INCH"
                     Else
                         dt.Rows(dt.Rows.Count - 1)("QTY") = queryQty * queryLG * queryWD
+                        dt.Rows(dt.Rows.Count - 1)("QTY UNIT") = "SQ. INCH"
                     End If
                 End If
             End If
@@ -365,6 +364,7 @@
             xlSh.Rows(1).font.bold = True
             xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
             xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+            xlSh.Columns(6).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
 
             xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
             xlSh.Name = "Process Code 3"
@@ -373,6 +373,7 @@
             xlSh.Rows(1).font.bold = True
             xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
             xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+            xlSh.Columns(6).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
 
             xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
             xlSh.Name = "Process Code 2"
@@ -381,6 +382,7 @@
             xlSh.Rows(1).font.bold = True
             xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
             xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+            xlSh.Columns(6).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
 
             xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
             xlSh.Name = "Process Code 1"
@@ -389,6 +391,7 @@
             xlSh.Rows(1).font.bold = True
             xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 7)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
             xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
+            xlSh.Columns(6).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
 
             xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)
             xlSh.Name = "Project Hierarchy"

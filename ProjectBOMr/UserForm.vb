@@ -27,7 +27,6 @@
             End If
         End If
 
-
         isThinking = False
     End Sub
 
