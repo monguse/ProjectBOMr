@@ -28,11 +28,11 @@
 
         'CSVFolderToTable(dt:=rawBOM, folderPath:=folderPath)
         ProcessDWFFolder(rawBOM, folderPath)
-        'SortByParent(dt:=parentBOM, st:=rawBOM)
-        'sortByType(dt:=pType1BOM, st:=rawBOM, processCode:=1)
-        'sortByType(dt:=pType2BOM, st:=rawBOM, processCode:=2)
-        'sortByType(dt:=pType3BOM, st:=rawBOM, processCode:=3)
-        'sortByType(dt:=unknownBOM, st:=rawBOM, processCode:=-1)
+        SortByParent(dt:=parentBOM, st:=rawBOM)
+        sortByType(dt:=pType1BOM, st:=rawBOM, processCode:=1)
+        sortByType(dt:=pType2BOM, st:=rawBOM, processCode:=2)
+        sortByType(dt:=pType3BOM, st:=rawBOM, processCode:=3)
+        sortByType(dt:=unknownBOM, st:=rawBOM, processCode:=-1)
 
         If DumpTablesToExcel(bomSavePath:=folderPath + "\BOM " + sProjNum + ".xlsx", _
                           stRaw:=rawBOM, _
@@ -165,7 +165,7 @@
 
         For stRowParent As Integer = 0 To st.Rows.Count - 1
             foundParent = False
-            queryNumber = st.Rows(stRowParent)(1)
+            queryNumber = st.Rows(stRowParent)("PARENT")
 
             If queryNumber = "" Then
                 Continue For
@@ -174,16 +174,15 @@
             For stRowChild As Integer = 0 To st.Rows.Count - 1
                 If stRowParent = stRowChild Then
                     Continue For
-                ElseIf queryNumber = st.Rows(stRowChild)(0) Then
+                ElseIf queryNumber = st.Rows(stRowChild)("NUMBER") Then
                     foundParent = True
                 End If
             Next
 
             If Not foundParent Then
-                dt.Rows.Add({st.Rows(stRowParent)(5), st.Rows(stRowParent)(3), queryNumber})
+                dt.Rows.Add({st.Rows(stRowParent)("QTY"), st.Rows(stRowParent)("DESCRIPTION"), queryNumber})
             End If
         Next
-
 
         numColumns = 1
         dtcolumns = numColumns
@@ -203,19 +202,19 @@
                 End If
                 Debug.Print("meep: " & queryNumber & " " & dtrow)
                 For stRow As Integer = 0 To st.Rows.Count - 1
-                    If st.Rows(stRow)(1) = queryNumber And st.Rows(stRow)(0) <> queryNumber And st.Rows(stRow)(0) <> "" Then
+                    If st.Rows(stRow)("PARENT") = queryNumber And st.Rows(stRow)("NUMBER") <> queryNumber And st.Rows(stRow)("NUMBER") <> "" Then
                         If isFirstRow Then
                             numColumns += 1
                             dt.Columns.Add(columnName:=CStr(numColumns), type:=GetType(String))
                             isFirstRow = False
                             isTheEnd = False
                         End If
-                        If st.Rows(stRow)(0)(0) = "4"c Then
+                        If st.Rows(stRow)("NUMBER")(0) = "4"c Then
                             Debug.Print(dtrow & " " & dtcolumns & " " & dt.Rows.Count & " " & stRow & " " & st.Rows(stRow)(0) & ":" & st.Rows(stRow)(1) & ":" & queryNumber)
                             dtDataRow = dt.NewRow()
-                            dtDataRow(columnName:=CStr(numColumns)) = st.Rows(stRow)(0)
-                            dtDataRow(columnName:="DWG QTY") = st.Rows(stRow)(5)
-                            dtDataRow(columnName:="DESCRIPTION") = st.Rows(stRow)(3)
+                            dtDataRow(columnName:=CStr(numColumns)) = st.Rows(stRow)("NUMBER")
+                            dtDataRow(columnName:="DWG QTY") = st.Rows(stRow)("QTY")
+                            dtDataRow(columnName:="DESCRIPTION") = st.Rows(stRow)("DESCRIPTION")
                             dt.Rows.InsertAt(row:=dtDataRow, pos:=dtrow + 1)
                         End If
                     End If
@@ -247,15 +246,31 @@
         dt.Columns.Add(columnName:="PROCESS CODE", type:=GetType(Integer))
 
         For stRow As Integer = 0 To st.Rows.Count - 1
-            queryNumber = st.Rows(stRow)(0)
-            queryParent = st.Rows(stRow)(1)
-            queryDescription = st.Rows(stRow)(3)
-            queryMaterial = st.Rows(stRow)(4)
-            queryCode = st.Rows(stRow)(2)
+            queryNumber = st.Rows(stRow)("NUMBER")
+            queryParent = st.Rows(stRow)("PARENT")
+            queryDescription = st.Rows(stRow)("DESCRIPTION")
+            If IsDBNull(st.Rows(stRow)("MATERIAL")) Then
+                queryMaterial = ""
+            Else
+                queryMaterial = st.Rows(stRow)("MATERIAL")
+            End If
+            queryCode = st.Rows(stRow)("PROCESSCODE")
+            If IsDBNull(st.Rows(stRow)("LG")) Then
+                queryLG = 0
+            Else
+                queryLG = Frac2Num(st.Rows(stRow)("LG"))
+            End If
+            If IsDBNull(st.Rows(stRow)("WD")) Then
+                queryWD = 0
+            Else
+                queryWD = Frac2Num(st.Rows(stRow)("WD"))
+            End If
+            If IsDBNull(st.Rows(stRow)("QTY")) Then
+                queryQty = 0
+            Else
+                queryQty = CDbl(st.Rows(stRow)("QTY"))
+            End If
 
-            queryLG = Frac2Num(st.Rows(stRow)(7))
-            queryWD = Frac2Num(st.Rows(stRow)(8))
-            queryQty = CDbl(st.Rows(stRow)(5))
             Debug.Print("moop: " & queryLG & " " & queryWD)
 
             foundChild = False
@@ -269,9 +284,9 @@
             End If
 
             For dtRow = 0 To dt.Rows.Count - 1
-                If dt.Rows(dtRow)(0) = queryNumber And _
-                    dt.Rows(dtRow)(1) = queryDescription And _
-                    dt.Rows(dtRow)(2) = queryMaterial Then
+                If dt.Rows(dtRow)("NUMBER") = queryNumber And _
+                    dt.Rows(dtRow)("DESCRIPTION") = queryDescription And _
+                    dt.Rows(dtRow)("MATERIAL") = queryMaterial Then
                     foundChild = True
                     Exit For
                 End If
@@ -341,7 +356,7 @@
             TableToWorksheet(st:=stRaw, ws:=xlSh)
             xlSh.Columns.AutoFit()
             xlSh.Rows(1).font.bold = True
-            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, 9)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
+            xlSh.Range(xlSh.Cells(1, 1), xlSh.Cells(1, stRaw.Columns.Count)).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Plum)
             xlSh.Columns(1).horizontalalignment = Excel.XlHAlign.xlHAlignLeft
 
             xlSh = DirectCast(xlWB.Worksheets.Add(), Excel.Worksheet)

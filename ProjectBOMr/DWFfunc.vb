@@ -227,9 +227,10 @@
     End Function
 
     Private Sub ParseXMLPartList(dt As System.Data.DataTable, ByVal tableContent As String, ByVal dwfInfo As DWFInfo)
-        Dim dataRow As System.Data.DataRow
+        Dim dataRow, revRow As System.Data.DataRow
         Dim readerBuf As String
         Dim sheetRevLevel, pos As Integer
+        Dim isFirstRev As Boolean = True
 
         Using reader As System.Xml.XmlReader = System.Xml.XmlReader.Create(New System.IO.StringReader(tableContent))
             reader.MoveToContent()
@@ -250,6 +251,12 @@
                         reader.MoveToAttribute("name")
                         Select Case reader.ReadContentAsString
                             Case "REV"
+                                If isFirstRev Then
+                                    revRow = dataRow
+                                    isFirstRev = False
+                                Else
+                                    dt.Rows.Remove(dataRow)
+                                End If
                                 reader.MoveToAttribute("value")
                                 sheetRevLevel = CInt(reader.ReadContentAsString)
                                 If sheetRevLevel > revLevel Then
@@ -260,20 +267,21 @@
                                     Next
                                     revLevel += 1
                                 End If
-                                dataRow("REV" + CStr(sheetRevLevel)) = reader.ReadContentAsString
-                                dataRow("DESCRIPTION") = dwfInfo.Title
-                                dataRow("NUMBER") = dwfInfo.PartNumber
+                                revRow("REV" + CStr(sheetRevLevel)) = reader.ReadContentAsString
+                                revRow("DESCRIPTION") = dwfInfo.Title
+                                revRow("NUMBER") = dwfInfo.PartNumber
+                                revRow("QTY") = "1"
                                 While reader.ReadToNextSibling("dwf:Property")
                                     reader.MoveToAttribute("name")
                                     Select Case reader.ReadContentAsString
                                         Case "DESCRIPTION"
                                             reader.MoveToAttribute("value")
-                                            dataRow("REVNOTE" & CStr(sheetRevLevel)) = reader.ReadContentAsString
+                                            revRow("REVNOTE" & CStr(sheetRevLevel)) = reader.ReadContentAsString
                                         Case "DATE"
                                             If reader.MoveToAttribute("value") Then
-                                                dataRow("REVDATE" & CStr(sheetRevLevel)) = reader.ReadContentAsString
+                                                revRow("REVDATE" & CStr(sheetRevLevel)) = reader.ReadContentAsString
                                             Else
-                                                dataRow("REVDATE" & CStr(sheetRevLevel)) = dwfInfo.DateCreated
+                                                revRow("REVDATE" & CStr(sheetRevLevel)) = dwfInfo.DateCreated
                                             End If
                                     End Select
                                 End While
@@ -334,6 +342,13 @@
                             Exit Do
                         End If
                     Loop
+                    Try
+                        If IsDBNull(dataRow("NUMBER")) Then
+                            dt.Rows.Remove(dataRow)
+                        End If
+                    Catch ex As Exception
+                        Debug.Print(ex.Message)
+                    End Try
                 End If
             End While
         End Using
