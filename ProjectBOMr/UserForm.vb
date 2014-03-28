@@ -45,8 +45,7 @@
         Cout("Writing BOM...")
 
         If sProjPath <> "" Then
-            'Dim sBomPath = GenBOM.ProcessFolder(sProjPath, tb_Project.Text)
-            Dim sbompath = ""
+            Dim sBomPath = GenBOM.ProcessFolder(sProjPath, tb_Project.Text)
             If sBomPath <> "" Then
                 Cout("Wrote BOM! ")
                 Cout("  " & sBomPath)
@@ -54,7 +53,6 @@
                 Cout("Failed to write BOM")
             End If
         End If
-        DWFfunc.ProcessDWFFolder("C:\Projects\dwf")
         b_OK.Enabled = True
     End Sub
 End Class

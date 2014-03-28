@@ -1,8 +1,7 @@
 ﻿Module GenBOM
     Private Const BaseFilePath = "C:\projects\"
 
-    ' Gets the user's history with the specified project number
-    ' The history files are stored in the user's AppData
+    ' Gets the user's history with the specified project number, history is in AppData
     Private Sub GetHistory(iProjNum As Long)
 
     End Sub
@@ -27,12 +26,13 @@
 
         ProcessFolder = ""
 
-        CSVFolderToTable(dt:=rawBOM, folderPath:=folderPath)
-        SortByParent(dt:=parentBOM, st:=rawBOM)
-        sortByType(dt:=pType1BOM, st:=rawBOM, processCode:=1)
-        sortByType(dt:=pType2BOM, st:=rawBOM, processCode:=2)
-        sortByType(dt:=pType3BOM, st:=rawBOM, processCode:=3)
-        sortByType(dt:=unknownBOM, st:=rawBOM, processCode:=-1)
+        'CSVFolderToTable(dt:=rawBOM, folderPath:=folderPath)
+        ProcessDWFFolder(rawBOM, folderPath)
+        'SortByParent(dt:=parentBOM, st:=rawBOM)
+        'sortByType(dt:=pType1BOM, st:=rawBOM, processCode:=1)
+        'sortByType(dt:=pType2BOM, st:=rawBOM, processCode:=2)
+        'sortByType(dt:=pType3BOM, st:=rawBOM, processCode:=3)
+        'sortByType(dt:=unknownBOM, st:=rawBOM, processCode:=-1)
 
         If DumpTablesToExcel(bomSavePath:=folderPath + "\BOM " + sProjNum + ".xlsx", _
                           stRaw:=rawBOM, _
@@ -43,19 +43,6 @@
                           stUnknown:=unknownBOM) Then
             ProcessFolder = folderPath + "\BOM " + sProjNum + ".xlsx"
         End If
-
-        'Dim fPath As String = sPath + "\BOM " + sProjNum + ".csv"
-        'Dim fPath As String = sPath + "\BOM " + sProjNum + ".xlsx"
-        'If TableToCSV(combinedBOM, fPath) Then
-        'OpenExcel()
-        'If TableToExcel(combinedBOM, fPath) Then
-        '    SortByParent(fPath)
-        '    SortByType(fPath)
-        '    ProcessFolder = fPath
-        'End If
-        'CloseExcel()
-
-
     End Function
 
     Public Function FindPath(sPath As String) As String

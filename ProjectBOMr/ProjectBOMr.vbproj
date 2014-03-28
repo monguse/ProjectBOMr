@@ -58,8 +58,6 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Import Include="Microsoft.Office" />
-    <Import Include="Microsoft.Office.Core" />
     <Import Include="Microsoft.Office.Interop" />
     <Import Include="Microsoft.Office.Interop.Excel" />
     <Import Include="Microsoft.VisualBasic" />
