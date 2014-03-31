@@ -26,8 +26,6 @@ Partial Class UserForm
         Me.tb_Project = New System.Windows.Forms.TextBox()
         Me.b_OK = New System.Windows.Forms.Button()
         Me.GroupBox1 = New System.Windows.Forms.GroupBox()
-        Me.Button2 = New System.Windows.Forms.Button()
-        Me.Button1 = New System.Windows.Forms.Button()
         Me.rtb_Console = New System.Windows.Forms.RichTextBox()
         Me.GroupBox1.SuspendLayout()
         Me.SuspendLayout()
@@ -59,8 +57,6 @@ Partial Class UserForm
         '
         'GroupBox1
         '
-        Me.GroupBox1.Controls.Add(Me.Button2)
-        Me.GroupBox1.Controls.Add(Me.Button1)
         Me.GroupBox1.Controls.Add(Me.rtb_Console)
         Me.GroupBox1.Location = New System.Drawing.Point(15, 51)
         Me.GroupBox1.Name = "GroupBox1"
@@ -68,24 +64,6 @@ Partial Class UserForm
         Me.GroupBox1.TabIndex = 3
         Me.GroupBox1.TabStop = False
         Me.GroupBox1.Text = "Messages"
-        '
-        'Button2
-        '
-        Me.Button2.Location = New System.Drawing.Point(6, 199)
-        Me.Button2.Name = "Button2"
-        Me.Button2.Size = New System.Drawing.Size(75, 23)
-        Me.Button2.TabIndex = 3
-        Me.Button2.Text = "Clear"
-        Me.Button2.UseVisualStyleBackColor = True
-        '
-        'Button1
-        '
-        Me.Button1.Location = New System.Drawing.Point(258, 199)
-        Me.Button1.Name = "Button1"
-        Me.Button1.Size = New System.Drawing.Size(113, 23)
-        Me.Button1.TabIndex = 4
-        Me.Button1.Text = "Copy to Clipboard"
-        Me.Button1.UseVisualStyleBackColor = True
         '
         'rtb_Console
         '
@@ -95,7 +73,7 @@ Partial Class UserForm
         Me.rtb_Console.Name = "rtb_Console"
         Me.rtb_Console.ReadOnly = True
         Me.rtb_Console.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical
-        Me.rtb_Console.Size = New System.Drawing.Size(365, 174)
+        Me.rtb_Console.Size = New System.Drawing.Size(365, 210)
         Me.rtb_Console.TabIndex = 0
         Me.rtb_Console.Text = ""
         '
@@ -123,7 +101,5 @@ Partial Class UserForm
     Friend WithEvents b_OK As System.Windows.Forms.Button
     Friend WithEvents GroupBox1 As System.Windows.Forms.GroupBox
     Friend WithEvents rtb_Console As System.Windows.Forms.RichTextBox
-    Friend WithEvents Button2 As System.Windows.Forms.Button
-    Friend WithEvents Button1 As System.Windows.Forms.Button
 
 End Class

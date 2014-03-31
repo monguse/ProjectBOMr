@@ -74,7 +74,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DWFfunc.vb" />
-    <Compile Include="InventorTouch.vb" />
     <Compile Include="UserForm.vb">
       <SubType>Form</SubType>
     </Compile>

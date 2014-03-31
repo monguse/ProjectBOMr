@@ -236,7 +236,7 @@
             reader.MoveToContent()
             While reader.Read()
                 If reader.Name = "dwf:Properties" And reader.NodeType <> Xml.XmlNodeType.EndElement Then
-                    Debug.Print(dt.Rows.Count)
+                    'Debug.Print(dt.Rows.Count)
                     dataRow = dt.NewRow()
                     dt.Rows.Add(dataRow)
                     dataRow("PRODCAT") = dwfInfo.ProductCategory
@@ -287,54 +287,91 @@
                                 End While
                                 Exit Do
                             Case "PART No."
-                                reader.MoveToAttribute("value")
-                                If Not IsDBNull(dataRow("NUMBER")) Then
-                                    If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                If reader.MoveToAttribute("value") Then
+                                    If Not IsDBNull(dataRow("NUMBER")) Then
+                                        If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                            dataRow("NUMBER") = reader.ReadContentAsString
+                                        End If
+                                    Else
                                         dataRow("NUMBER") = reader.ReadContentAsString
                                     End If
                                 Else
-                                    dataRow("NUMBER") = reader.ReadContentAsString
+                                    dataRow("NUMBER") = ""
+                                End If
+                            Case "PART NUMBER"
+                                If reader.MoveToAttribute("value") Then
+                                    If Not IsDBNull(dataRow("NUMBER")) Then
+                                        If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                            dataRow("NUMBER") = reader.ReadContentAsString
+                                        End If
+                                    Else
+                                        dataRow("NUMBER") = reader.ReadContentAsString
+                                    End If
+                                Else
+                                    dataRow("NUMBER") = ""
                                 End If
                             Case "STOCK No."
-                                reader.MoveToAttribute("value")
-                                If Not IsDBNull(dataRow("NUMBER")) Then
-                                    If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                If reader.MoveToAttribute("value") Then
+                                    If Not IsDBNull(dataRow("NUMBER")) Then
+                                        If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                            dataRow("NUMBER") = reader.ReadContentAsString
+                                        End If
+                                    Else
                                         dataRow("NUMBER") = reader.ReadContentAsString
                                     End If
                                 Else
-                                    dataRow("NUMBER") = reader.ReadContentAsString
+                                    dataRow("NUMBER") = ""
                                 End If
                             Case "STOCK NUMBER"
-                                reader.MoveToAttribute("value")
-                                If Not IsDBNull(dataRow("NUMBER")) Then
-                                    If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                If reader.MoveToAttribute("value") Then
+                                    If Not IsDBNull(dataRow("NUMBER")) Then
+                                        If dataRow("NUMBER") = "-" Or dataRow("NUMBER") = "" Then
+                                            dataRow("NUMBER") = reader.ReadContentAsString
+                                        End If
+                                    Else
                                         dataRow("NUMBER") = reader.ReadContentAsString
                                     End If
                                 Else
-                                    dataRow("NUMBER") = reader.ReadContentAsString
+                                    dataRow("NUMBER") = ""
                                 End If
                             Case "DESCRIPTION"
-                                reader.MoveToAttribute("value")
-                                dataRow("DESCRIPTION") = reader.ReadContentAsString
-                            Case "MATERIAL"
-                                reader.MoveToAttribute("value")
-                                dataRow("MATERIAL") = reader.ReadContentAsString
-                            Case "LENGTH"
-                                reader.MoveToAttribute("value")
-                                readerBuf = LCase(reader.ReadContentAsString)
-                                pos = InStr(readerBuf, "x")
-                                If pos > 0 Then
-                                    dataRow("LG") = Trim(Left(readerBuf, pos - 1))
-                                    dataRow("WD") = Trim(Right(readerBuf, readerBuf.Length - pos))
+                                If reader.MoveToAttribute("value") Then
+                                    dataRow("DESCRIPTION") = reader.ReadContentAsString
                                 Else
-                                    dataRow("LG") = readerBuf
+                                    dataRow("DESCRIPTION") = ""
+                                End If
+                            Case "MATERIAL"
+                                If reader.MoveToAttribute("value") Then
+                                    dataRow("MATERIAL") = reader.ReadContentAsString
+                                Else
+                                    dataRow("MATERIAL") = ""
+                                End If
+                            Case "LENGTH"
+                                If reader.MoveToAttribute("value") Then
+                                    readerBuf = LCase(reader.ReadContentAsString)
+                                    pos = InStr(readerBuf, "x")
+                                    If pos > 0 Then
+                                        dataRow("LG") = Trim(Left(readerBuf, pos - 1))
+                                        dataRow("WD") = Trim(Right(readerBuf, readerBuf.Length - pos))
+                                    Else
+                                        dataRow("LG") = readerBuf
+                                    End If
+                                Else
+                                    dataRow("LG") = ""
+                                    dataRow("WD") = ""
                                 End If
                             Case "DIAMETER"
-                                reader.MoveToAttribute("value")
-                                dataRow("LG") = reader.ReadContentAsString
+                                If reader.MoveToAttribute("value") Then
+                                    dataRow("LG") = reader.ReadContentAsString
+                                Else
+                                    dataRow("LG") = ""
+                                End If
                             Case "QTY"
-                                reader.MoveToAttribute("value")
-                                dataRow("QTY") = reader.ReadContentAsString
+                                If reader.MoveToAttribute("value") Then
+                                    dataRow("QTY") = reader.ReadContentAsString
+                                Else
+                                    dataRow("QTY") = ""
+                                End If
                             Case Else
                         End Select
 
@@ -347,7 +384,7 @@
                             dt.Rows.Remove(dataRow)
                         End If
                     Catch ex As Exception
-                        Debug.Print(ex.Message)
+                        Debug.Print("ParseXML: " & ex.Message)
                     End Try
                 End If
             End While

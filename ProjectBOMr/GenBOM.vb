@@ -175,6 +175,9 @@
                 If stRowParent = stRowChild Then
                     Continue For
                 ElseIf queryNumber = st.Rows(stRowChild)("NUMBER") Then
+                    If queryNumber = "4003702" Then
+
+                    End If
                     foundParent = True
                 End If
             Next
@@ -189,7 +192,7 @@
         dtrow = 0
         Dim runcount As Integer = 0
         Do
-            Debug.Print("runcount: " & runcount & " " & dtrow & " " & dt.Rows.Count)
+            'Debug.Print("runcount: " & runcount & " " & dtrow & " " & dt.Rows.Count)
             isFirstRow = True
             isTheEnd = True
             queryNumber = ""
@@ -200,7 +203,7 @@
                     dtrow += 1
                     Continue Do
                 End If
-                Debug.Print("meep: " & queryNumber & " " & dtrow)
+                'Debug.Print("meep: " & queryNumber & " " & dtrow)
                 For stRow As Integer = 0 To st.Rows.Count - 1
                     If st.Rows(stRow)("PARENT") = queryNumber And st.Rows(stRow)("NUMBER") <> queryNumber And st.Rows(stRow)("NUMBER") <> "" Then
                         If isFirstRow Then
@@ -210,7 +213,7 @@
                             isTheEnd = False
                         End If
                         If st.Rows(stRow)("NUMBER")(0) = "4"c Then
-                            Debug.Print(dtrow & " " & dtcolumns & " " & dt.Rows.Count & " " & stRow & " " & st.Rows(stRow)(0) & ":" & st.Rows(stRow)(1) & ":" & queryNumber)
+                            'Debug.Print(dtrow & " " & dtcolumns & " " & dt.Rows.Count & " " & stRow & " " & st.Rows(stRow)(0) & ":" & st.Rows(stRow)(1) & ":" & queryNumber)
                             dtDataRow = dt.NewRow()
                             dtDataRow(columnName:=CStr(numColumns)) = st.Rows(stRow)("NUMBER")
                             dtDataRow(columnName:="DWG QTY") = st.Rows(stRow)("QTY")
@@ -266,12 +269,12 @@
                 queryWD = Frac2Num(st.Rows(stRow)("WD"))
             End If
             If IsDBNull(st.Rows(stRow)("QTY")) Then
-                queryQty = 0
+                queryQty = 1
             Else
                 queryQty = CDbl(st.Rows(stRow)("QTY"))
             End If
 
-            Debug.Print("moop: " & queryLG & " " & queryWD)
+            'Debug.Print("moop: " & queryLG & " " & queryWD)
 
             foundChild = False
 
@@ -292,7 +295,7 @@
                 End If
             Next
 
-            If st.Rows(stRow)(0) <> st.Rows(stRow)(1) Then
+            If st.Rows(stRow)("NUMBER") <> st.Rows(stRow)("PARENT") Then
                 If foundChild Then
                     If queryLG = 0 Then
                         dt.Rows(dtRow)("QTY") = dt.Rows(dtRow)("QTY") + queryQty
